@@ -8,28 +8,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.*;
+import java.text.*;
 
 public class Hashtable{
-
-	class Data{
-
-		String date;
-		String power;
-		String voltage;
-		
-		public Data(){
-			date= null;
-			power=null;
-			voltage=null;
-		}
-		
-		public Data(String d, String p, String v){
-			date = d;
-			power=p;
-			voltage=v;
-		}
-
-	}
 
 	public static Data t;
 	static int[] primes=new int[52];
@@ -51,7 +32,7 @@ public class Hashtable{
 		}
 	}
 	/**
-	method extract Data to take the needed infomation from the .csv file
+	method extract Data to take the needed infomation from the .csv file and save to .txt file
 	*/
 	public static void extractData(){
 
@@ -89,38 +70,68 @@ try{
 		System.out.println(n+" IS NOT a prime number between 653 and 1009");
 		return false;
 	}
+
+	
 	/**
 	method to make hash Table of given size
 	@param table_size takes in the table size from the command line arguments	
+	@param probe_Type sets the type of probing used for collsion resolution
 	*/
-	public static void makeTable(int table_size){
+	public static void makeTable(int table_size, String probe_Type){
 		String line = null;
 
 		Data[] dates = new Data[table_size];
 		//adjust for type data not string
 		int no_of_probes=0;
+		double positions_Taken=0;
 		try{
 			BufferedReader filereader = new BufferedReader(new FileReader("tabledata/data.txt"));
-			filereader.readLine();
 			while ((line = filereader.readLine())!=null){
 			no_of_probes=0;
 			String [] lineinfo = line.split(",");
 			t=new Data(lineinfo[0], lineinfo[1], lineinfo[2]);
-			if ( dates[hash_key(lineinfo[0],table_size)]==null ){dates[hash_key(lineinfo[0],table_size)]=t; System.out.println(hash_key(lineinfo[0],table_size));}
+			if ( dates[hash_key(lineinfo[0],table_size)]==null ){dates[hash_key(lineinfo[0],table_size)]=t; 
+				positions_Taken=positions_Taken+1.00;}
 			else{
-				System.out.println(hash_key(lineinfo[0],table_size)+" is taken already");
+
 				int hash_No = hash_key(lineinfo[0],table_size);
 				int i = 1;
-				while(dates[hash_No]!=null){
-					hash_No = (hash_No+i)%table_size;
-					if(dates[hash_No]==null){dates[hash_No]=t;System.out.println("position now found after probes");break;}
-					else{i++;no_of_probes++;}
+				//Implementing linear probe here
+				if(probe_Type.equals("linear_Probe")){
+
+					System.out.println("Into linear probe function");
+					while(dates[hash_No]!=null){
+						hash_No = (hash_No+i)%table_size;//hash func for linear probe
+						if(dates[hash_No]==null){dates[hash_No]=t;
+							positions_Taken=positions_Taken+1.00;break;}
+						else{i++;no_of_probes++;}
+					}
+
 				}
-				
+
+				else{
+
+					//here we are implementing the apparently more efficient quadratic probing method
+					if(probe_Type.equals("quad_Probe")){
+						System.out.println("Into quad probe function");
+						while(dates[hash_No]!=null){
+							hash_No = ( hash_No+(i<<1)-1 )%table_size;//hash func for quad probe
+							if(dates[hash_No]==null){dates[hash_No]=t;
+								positions_Taken=positions_Taken+1.00;break;}
+							else{i++;no_of_probes++;
+							if (no_of_probes>table_size){System.out.println("Probes exceeding table size, please choose bigger table size");
+							break;							
+							}
+						}
+					}
+				}
+			}}
+			System.out.println("Number of probes made is "+no_of_probes);
+			//System.out.println(t.date+" "+t.power+" "+t.voltage);
 			}
-			System.out.println("Number of linear probes made is "+no_of_probes);
-			System.out.println(t.date+" "+t.power+" "+t.voltage);
-			}
+			double load_factor = positions_Taken/(double)table_size;
+			DecimalFormat lf = new DecimalFormat("###.###");
+			System.out.println("Load factor for table of size "+table_size+" is "+lf.format(load_factor) );
 		}
 		catch (Exception e){ e.printStackTrace();}
 	}
@@ -138,15 +149,55 @@ try{
 		return hashVal % tableSize;
 	}
 
+	public static void chaining_Table(int table_size){
+		System.out.println("Enter the chaining");		
+		String line = null;
+		LinkedList[] dates = new LinkedList[table_size];
+		//adjust for type data not string
+		int no_of_probes=0;
+		double positions_Taken=0;
+		try{
+			BufferedReader filereader = new BufferedReader(new FileReader("tabledata/data.txt"));
+			while ((line = filereader.readLine())!=null){
+				no_of_probes=0;
+				String [] lineinfo = line.split(",");
+				t=new Data(lineinfo[0], lineinfo[1], lineinfo[2]);
+				for (int lists =0;lists<table_size;lists++){				
+					String keylist = "keylist"+Integer.toString(lists);
+					LinkedList <Data> key_list = new LinkedList<>();
+					dates[lists]=key_list;
+				}
+				String keylist_two = "keylist"+Integer.toString( hash_key(lineinfo[0],table_size) );			
+				dates[hash_key(lineinfo[0],table_size)].add(t);
+				//System.out.println( t.date+" "+t.power+" "+t.voltage );
+				//System.out.println( dates[hash_key(lineinfo[0],table_size)] );
+				positions_Taken=positions_Taken+1.00;
+				no_of_probes++;	
+			}
+			for (int lists_two =0;lists_two<table_size;lists_two++){				
+				for(Object o : dates[lists_two] ){
+					for (Data key : o){System.out.println(key+" working");}
+				}
+			}
+			System.out.println("Number of probes made is "+no_of_probes);
+			System.out.println(t.date+" "+t.power+" "+t.voltage);
+
+			double load_factor = positions_Taken/(double)table_size;
+			DecimalFormat lf = new DecimalFormat("###.###");
+			System.out.println("Load factor for table of size "+table_size+" is "+lf.format(load_factor) );
+		}
+		catch (Exception e){ e.printStackTrace();}
+	}
+
 	/**
 	method for linear probing, the big one
 	*/
-	//public int linear_probe(int hash){}
-
 	public static void main(String[] args){
 		isPrime();
 		extractData();
-		makeTable(653);
-
+		if ( checkPrime(Integer.parseInt(args[0])) ){
+			if( args[1].equals("chaining") ){chaining_Table( Integer.parseInt(args[0]) );}
+			else{ makeTable( Integer.parseInt(args[0]), args[1]); }
+		}
 	}
 }
