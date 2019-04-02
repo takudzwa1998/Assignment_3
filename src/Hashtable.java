@@ -77,17 +77,19 @@ try{
 	@param table_size takes in the table size from the command line arguments	
 	@param probe_Type sets the type of probing used for collsion resolution
 	*/
-	public static void makeTable(int table_size, String probe_Type){
+	public static void makeTable(int table_size, String probe_Type, String filename){
 		String line = null;
 
 		Data[] dates = new Data[table_size];
 		//adjust for type data not string
-		int no_of_probes=0;
+		int no_of_quad_probes=0;
+		int no_of_linear_probes=0;
 		double positions_Taken=0;
 		try{
-			BufferedReader filereader = new BufferedReader(new FileReader("tabledata/data.txt"));
+			//FileReader file = new FileReader(filename);
+			BufferedReader filereader = new BufferedReader(new FileReader("tabledata/"+filename));
 			while ((line = filereader.readLine())!=null){
-			no_of_probes=0;
+			//no_of_probes=0;
 			String [] lineinfo = line.split(",");
 			t=new Data(lineinfo[0], lineinfo[1], lineinfo[2]);
 			if ( dates[hash_key(lineinfo[0],table_size)]==null ){dates[hash_key(lineinfo[0],table_size)]=t; 
@@ -98,13 +100,11 @@ try{
 				int i = 1;
 				//Implementing linear probe here
 				if(probe_Type.equals("linear_Probe")){
-
-					System.out.println("Into linear probe function");
 					while(dates[hash_No]!=null){
 						hash_No = (hash_No+i)%table_size;//hash func for linear probe
 						if(dates[hash_No]==null){dates[hash_No]=t;
 							positions_Taken=positions_Taken+1.00;break;}
-						else{i++;no_of_probes++;}
+						else{i++;no_of_linear_probes++;}
 					}
 
 				}
@@ -113,25 +113,24 @@ try{
 
 					//here we are implementing the apparently more efficient quadratic probing method
 					if(probe_Type.equals("quad_Probe")){
-						System.out.println("Into quad probe function");
 						while(dates[hash_No]!=null){
 							hash_No = ( hash_No+(i<<1)-1 )%table_size;//hash func for quad probe
 							if(dates[hash_No]==null){dates[hash_No]=t;
 								positions_Taken=positions_Taken+1.00;break;}
-							else{i++;no_of_probes++;
-							if (no_of_probes>table_size){System.out.println("Probes exceeding table size, please choose bigger table size");
-							break;							
-							}
+							else{i++;no_of_quad_probes++;
 						}
 					}
 				}
 			}}
-			System.out.println("Number of probes made is "+no_of_probes);
-			//System.out.println(t.date+" "+t.power+" "+t.voltage);
 			}
+			if (no_of_quad_probes>table_size){System.out.println("Probes exceeding table size,please choose bigger table size");}
+			else{
+				if(probe_Type.equals("quad_Probe")){System.out.println("Number of total quadratic probes made is "+no_of_quad_probes);}
+				if(probe_Type.equals("linear_Probe")){System.out.println("Number of total linear probes made is "+no_of_linear_probes);}
 			double load_factor = positions_Taken/(double)table_size;
 			DecimalFormat lf = new DecimalFormat("###.###");
-			System.out.println("Load factor for table of size "+table_size+" is "+lf.format(load_factor) );
+			System.out.println("Load factor for the hash table of size "+table_size+" is "+lf.format(load_factor) );
+			}
 		}
 		catch (Exception e){ e.printStackTrace();}
 	}
@@ -142,44 +141,50 @@ try{
 	@return hashVal % tableSize returns position of array
 	*/
 	public static int hash_key ( String date, int tableSize ){
-
+	
 		int hashVal = 0;
+		int powerNum=31;
 		for( int i = 0; i < date.length(); i++ )
-			hashVal += date.charAt(i);
-		return hashVal % tableSize;
+			hashVal += ( powerNum*hashVal )+date.charAt(i);
+		String newString = date.substring ( 11, date.length() );
+		String str = newString.replaceAll("\\D+","");
+		String str2 = str.replaceAll("0","");
+
+		//for( int i = 0; i < str2.length(); i++ )
+		//	hashVal += ( 4*str2.charAt(i) ) + ( str2.charAt(i)/2 ) +tableSize+ (hashVal % tableSize/2) ;
+		if(hashVal<0){hashVal= -1*hashVal;}
+		return (hashVal) % tableSize;
 	}
 
 	public static void chaining_Table(int table_size){
 		System.out.println("Enter the chaining");		
 		String line = null;
 		LinkedList[] dates = new LinkedList[table_size];
+
 		//adjust for type data not string
-		int no_of_probes=0;
+		int no_of_chain_probes=0;
 		double positions_Taken=0;
 		try{
 			BufferedReader filereader = new BufferedReader(new FileReader("tabledata/data.txt"));
+			for (int lists =0;lists<table_size;lists++){				
+				LinkedList <Data> key_list = new LinkedList<>();
+				dates[lists]=key_list;
+			}
+			no_of_chain_probes=0;
 			while ((line = filereader.readLine())!=null){
-				no_of_probes=0;
 				String [] lineinfo = line.split(",");
-				t=new Data(lineinfo[0], lineinfo[1], lineinfo[2]);
-				for (int lists =0;lists<table_size;lists++){				
-					String keylist = "keylist"+Integer.toString(lists);
-					LinkedList <Data> key_list = new LinkedList<>();
-					dates[lists]=key_list;
-				}
-				String keylist_two = "keylist"+Integer.toString( hash_key(lineinfo[0],table_size) );			
+				t=new Data(lineinfo[0], lineinfo[1], lineinfo[2]);		
 				dates[hash_key(lineinfo[0],table_size)].add(t);
-				//System.out.println( t.date+" "+t.power+" "+t.voltage );
-				//System.out.println( dates[hash_key(lineinfo[0],table_size)] );
 				positions_Taken=positions_Taken+1.00;
-				no_of_probes++;	
+				no_of_chain_probes++;	
 			}
-			for (int lists_two =0;lists_two<table_size;lists_two++){				
-				for(Object o : dates[lists_two] ){
-					for (Data key : o){System.out.println(key+" working");}
-				}
-			}
-			System.out.println("Number of probes made is "+no_of_probes);
+
+			//for (int lists_two =0;lists_two<table_size;lists_two++){
+			//	LinkedList<Data> dSimp = dates[lists_two];
+			//	for(Data obj : dSimp ){
+					//System.out.println( "data at position "+lists_two+" is "+obj.date+" "+obj.power+" "+obj.voltage);}
+			//}
+			System.out.println("Number of chaining probes made is "+no_of_chain_probes);
 			System.out.println(t.date+" "+t.power+" "+t.voltage);
 
 			double load_factor = positions_Taken/(double)table_size;
@@ -197,7 +202,7 @@ try{
 		extractData();
 		if ( checkPrime(Integer.parseInt(args[0])) ){
 			if( args[1].equals("chaining") ){chaining_Table( Integer.parseInt(args[0]) );}
-			else{ makeTable( Integer.parseInt(args[0]), args[1]); }
+			else{ makeTable( Integer.parseInt(args[0]), args[1], args[2] ); }
 		}
 	}
 }
